@@ -106,7 +106,9 @@ public class FormatConverter {
         } else if Self.isPCM(url: inputURL) == true,
                   Self.isCompressed(url: outputURL) == true
         {
-            convertPCMToCompressed(completionHandler: completionHandler)
+            Task {
+                await convertPCMToCompressed(completionHandler: completionHandler)
+            }
 
             // Compressed input and output, won't do sample rate
         } else if Self.isCompressed(url: inputURL) == true,

@@ -48,6 +48,7 @@ extension FormatConverter {
             }
         }
     }
+    
 
     /// Convert to compressed first creating a tmp file to PCM to allow more flexible conversion
     /// options to work.
@@ -88,16 +89,18 @@ extension FormatConverter {
 
             self.inputURL = tempFile
 
-            self.convertPCMToCompressed { error in
-                try? FileManager.default.removeItem(at: tempFile)
-                completionHandler?(error)
+            Task {
+                await self.convertPCMToCompressed { error in
+                    try? FileManager.default.removeItem(at: tempFile)
+                    completionHandler?(error)
+                }
             }
         }
     }
 
     /// The AVFoundation way. *This doesn't currently handle compressed input - only compressed output.*
-    func convertPCMToCompressed(completionHandler: FormatConverterCallback? = nil) {
-        guard let inputURL = inputURL else {
+        func convertPCMToCompressed(completionHandler: FormatConverterCallback? = nil) async {
+            guard let inputURL = inputURL else {
             completionHandler?(Self.createError(message: "Input file can't be nil."))
             return
         }
@@ -220,8 +223,7 @@ extension FormatConverter {
         let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: outputSettings, sourceFormatHint: hint)
         writer.add(writerInput)
 
-        guard let track = asset.tracks(withMediaType: .audio).first else {
-            completionProxy(error: Self.createError(message: "No audio was found in the input file."),
+            guard let track = try? await asset.loadTracks(withMediaType: .audio).first else {            completionProxy(error: Self.createError(message: "No audio was found in the input file."),
                             completionHandler: completionHandler)
             return
         }
